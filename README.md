@@ -1,5 +1,31 @@
 # Catanatron
 
+> **Fork of**: [bcollazo/catanatron](https://github.com/bcollazo/catanatron) - Settlers of Catan simulator
+
+## PPO Reinforcement Learning Experiments
+
+Training PPO agents using Stable-Baselines3 to play Catan. Current progress against the ValueFunctionPlayer baseline:
+
+| Version | Architecture & Key Changes | Win Rate | Avg VP | Improvement |
+|---------|---------------------------|----------|--------|-------------|
+| v1 (baseline) | CNN [64,128,256,512] + MLP 8-layer; partial rewards | 6% | 4.83 | - |
+| v3 | + dense VP rewards | 9% | 5.12 | +50% wins |
+| v4 | + mixed opponents (ValueFunc/WeightedRandom/VP) | 11% | 4.81 | +83% wins |
+| **v8b** | **Self-play with opponent pool + bootstrapping** | **12%** | **5.35** | **+100% wins** |
+| v10 | Online imitation learning with expert guidance | 9% | 5.15 | +50% wins |
+
+**Key findings so far:**
+- Self-play with opponent pooling (v8b) achieved the best results: **2x win rate improvement** over baseline
+- Dense VP-based reward shaping helps more than partial rewards
+- Pure cyclic self-play from scratch (v9) underperformed bootstrapped approaches
+- GNN/attention architectures (v5, v6) didn't outperform simpler CNNs
+
+Experiments ongoing - see [ppo_eval_runs.csv](ppo_eval_runs.csv) for detailed metrics.
+
+*A PR will be submitted to the original repository upon completion of experiments.*
+
+---
+
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 [![Join the chat at https://gitter.im/bcollazo-catanatron/community](https://badges.gitter.im/bcollazo-catanatron/community.svg)](https://gitter.im/bcollazo-catanatron/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)

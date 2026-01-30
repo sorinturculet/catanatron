@@ -491,13 +491,117 @@ def game_features(game: Game, p0_color: Color):
     return features
 
 
+# ===== Production-Aware Features for v11 =====
+NUM_NODES = 54  # Total nodes on standard Catan board
+
+
+def buildable_node_values(game: Game, p0_color: Color):
+    """
+    Production value for each buildable settlement location.
+    Helps agent learn WHERE to place settlements based on production math.
+    """
+    features = {}
+    board = game.state.board
+    catan_map = board.map
+
+    # Get buildable nodes for P0
+    buildable = board.buildable_node_ids(p0_color)
+
+    # For each node, show its production value if buildable (0 otherwise)
+    for node_id in range(NUM_NODES):
+        if node_id in buildable:
+            total_prod = sum(catan_map.node_production[node_id].values())
+            features[f"NODE{node_id}_BUILDABLE_VALUE"] = total_prod
+        else:
+            features[f"NODE{node_id}_BUILDABLE_VALUE"] = 0.0
+
+    # Summary feature: best available production value
+    if buildable:
+        best_value = max(sum(catan_map.node_production[n].values()) for n in buildable)
+        features["P0_BEST_BUILDABLE_VALUE"] = best_value
+    else:
+        features["P0_BEST_BUILDABLE_VALUE"] = 0.0
+
+    return features
+
+
+def resource_strategy_features(game: Game, p0_color: Color):
+    """
+    Strategic resource combo features - let agent learn when each strategy matters.
+    Provides city potential, expansion potential, settlement potential, etc.
+    """
+    features = {}
+    board = game.state.board
+    catan_map = board.map
+    robbed_nodes = set(catan_map.tiles[board.robber_coordinate].nodes.values())
+
+    for i, color in iter_players(game.state.colors, p0_color):
+        # Get production per resource for this player (considering robber)
+        prod = {}
+        for resource in RESOURCES:
+            production = 0
+            for node_id in get_player_buildings(game.state, color, SETTLEMENT):
+                if node_id not in robbed_nodes:
+                    production += get_node_production(catan_map, node_id, resource)
+            for node_id in get_player_buildings(game.state, color, CITY):
+                if node_id not in robbed_nodes:
+                    production += 2 * get_node_production(catan_map, node_id, resource)
+            prod[resource] = production
+
+        # CITY POTENTIAL: How fast can build cities (need 3 ore + 2 wheat)
+        # min(ore/3, wheat/2) represents rate-limiting factor
+        ore_prod = prod.get("ORE", 0)
+        wheat_prod = prod.get("WHEAT", 0)
+        if ore_prod > 0 and wheat_prod > 0:
+            city_potential = min(ore_prod / 3, wheat_prod / 2)
+        else:
+            city_potential = 0.0
+        features[f"P{i}_CITY_POTENTIAL"] = city_potential
+
+        # EXPANSION POTENTIAL: How fast can build roads + settlements
+        # Need wood + brick for roads
+        wood_prod = prod.get("WOOD", 0)
+        brick_prod = prod.get("BRICK", 0)
+        expansion_potential = min(wood_prod, brick_prod)
+        features[f"P{i}_EXPANSION_POTENTIAL"] = expansion_potential
+
+        # SETTLEMENT POTENTIAL: Balance of all 4 resources needed
+        sheep_prod = prod.get("SHEEP", 0)
+        settlement_potential = min(wood_prod, brick_prod, sheep_prod, wheat_prod)
+        features[f"P{i}_SETTLEMENT_POTENTIAL"] = settlement_potential
+
+        # DEV CARD POTENTIAL: Sheep + wheat + ore
+        dev_potential = min(sheep_prod, wheat_prod, ore_prod)
+        features[f"P{i}_DEV_CARD_POTENTIAL"] = dev_potential
+
+        # RESOURCE DIVERSITY: How many resources have non-zero production
+        diversity = sum(1 for r in RESOURCES if prod.get(r, 0) > 0)
+        features[f"P{i}_RESOURCE_DIVERSITY"] = diversity
+
+        # Strategy focus ratios
+        total_prod = sum(prod.values())
+        if total_prod > 0:
+            # ORE-WHEAT RATIO: Higher = city-focused strategy
+            ore_wheat_ratio = (ore_prod + wheat_prod) / total_prod
+            features[f"P{i}_CITY_FOCUS"] = ore_wheat_ratio
+
+            # WOOD-BRICK RATIO: Higher = expansion-focused strategy
+            wood_brick_ratio = (wood_prod + brick_prod) / total_prod
+            features[f"P{i}_EXPANSION_FOCUS"] = wood_brick_ratio
+        else:
+            features[f"P{i}_CITY_FOCUS"] = 0.0
+            features[f"P{i}_EXPANSION_FOCUS"] = 0.0
+
+    return features
+
+
 feature_extractors = [
     # PLAYER FEATURES =====
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    # build_production_features(True),
-    # build_production_features(False),
+    build_production_features(True),   # v11: ENABLED - effective production (considers robber)
+    build_production_features(False),  # v11: ENABLED - total production (ignores robber)
     # expansion_features,
     # reachability_features,
     # RAW BASE-MAP FEATURES =====
@@ -506,6 +610,9 @@ feature_extractors = [
     graph_features,
     # GAME FEATURES =====
     game_features,
+    # PRODUCTION-AWARE FEATURES (v11) =====
+    buildable_node_values,       # v11: NEW - production value per buildable node
+    resource_strategy_features,  # v11: NEW - strategic combo features
 ]
 
 

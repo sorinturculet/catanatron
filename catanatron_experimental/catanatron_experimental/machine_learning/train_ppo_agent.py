@@ -45,7 +45,7 @@ def learning_rate_schedule(initial_lr, final_lr):
 def main():
     # ===== Params:
     # With 100,000,000 timesteps, training took 4.97 days
-    total_timesteps = 100_000_000
+    total_timesteps = 10_000_000
     cnn_arch = [64, 128, 256, 512]
     net_arch = [
         dict(

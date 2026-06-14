@@ -315,7 +315,8 @@ def player_deck_replenish(state, color, resource, amount=1):
 
 def player_deck_random_draw(state, color):
     deck_array = player_deck_to_array(state, color)
-    resource = random.choice(deck_array)
+    rng = getattr(state, "rng", random)
+    resource = rng.choice(deck_array)
     player_deck_draw(state, color, resource)
     return resource
 

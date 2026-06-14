@@ -1,0 +1,147 @@
+.dashboard-page {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+.dashboard-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100% - 64px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 20, 24, 0.92) !important;
+  color: white !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
+  padding-bottom: 8px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px 16px;
+}
+
+.dashboard-title {
+  color: white;
+}
+
+.dashboard-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard-actions button {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+}
+
+.dashboard-loading {
+  min-height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dashboard-error,
+.dashboard-empty {
+  padding: 24px 28px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.dashboard-games-grid {
+  padding: 8px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.game-entry {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.game-entry:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+.game-entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.game-entry-title {
+  color: white;
+  font-weight: 600;
+  font-size: 1rem !important;
+}
+
+.game-entry-meta {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.game-entry-players {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem !important;
+}
+
+.game-entry-id {
+  display: none;
+}
+
+.game-entry-actions button {
+  text-transform: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    padding: 20px 20px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dashboard-games-grid {
+    padding: 8px 14px 14px;
+  }
+
+  .game-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .game-entry-actions {
+    align-self: flex-end;
+  }
+}

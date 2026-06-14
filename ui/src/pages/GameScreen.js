@@ -13,11 +13,10 @@ import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { getState, postAction } from "../utils/apiClient";
+import { getState } from "../utils/apiClient";
+import { openGameSocket } from "../utils/socketClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
-
-const ROBOT_THINKING_TIME = 300;
 
 function GameScreen({ replayMode }) {
   const { gameId, stateIndex } = useParams();
@@ -37,39 +36,40 @@ function GameScreen({ replayMode }) {
     })();
   }, [gameId, stateIndex, dispatch]);
 
-  // Maybe kick off next query?
+  // Subscribe to realtime updates.
   useEffect(() => {
-    if (!state.gameState || replayMode) {
+    if (!gameId || replayMode) {
       return;
     }
-    if (
-      state.gameState.bot_colors.includes(state.gameState.current_color) &&
-      !state.gameState.winning_color
-    ) {
-      // Make bot click next action.
-      (async () => {
-        setIsBotThinking(true);
-        const start = new Date();
-        const gameState = await postAction(gameId);
-        const requestTime = new Date() - start;
-        setTimeout(() => {
-          // simulate thinking
-          setIsBotThinking(false);
-          dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          if (getHumanColor(gameState)) {
-            dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-          }
-        }, ROBOT_THINKING_TIME - requestTime);
-      })();
-    }
+
+    return openGameSocket(
+      gameId,
+      (gameState) => {
+        setIsBotThinking(false);
+        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+        if (getHumanColor(gameState)) {
+          dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+        }
+      },
+      () => {
+        setIsBotThinking(false);
+      }
+    );
   }, [
     gameId,
     replayMode,
-    state.gameState,
     dispatch,
     enqueueSnackbar,
     closeSnackbar,
   ]);
+
+  useEffect(() => {
+    if (!state.gameState || replayMode) return;
+    const botTurn =
+      state.gameState.bot_colors.includes(state.gameState.current_color) &&
+      !state.gameState.winning_color;
+    setIsBotThinking(botTurn);
+  }, [state.gameState, replayMode]);
 
   if (!state.gameState) {
     return (

@@ -1,0 +1,62 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(20, 20, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-title {
+  color: white;
+  margin-bottom: 4px;
+}
+
+.auth-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.auth-textfield {
+  .MuiInputLabel-root,
+  .MuiOutlinedInput-input {
+    color: white;
+  }
+
+  .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+
+  .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.auth-error {
+  color: #ff8a80;
+}
+
+.auth-success {
+  color: #a5d6a7;
+}
+
+.auth-footer {
+  color: rgba(255, 255, 255, 0.74);
+  display: flex;
+  gap: 6px;
+}
+
+.auth-link {
+  color: #90caf9;
+  cursor: pointer;
+}

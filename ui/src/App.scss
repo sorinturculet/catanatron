@@ -5,3 +5,10 @@
 .logo {
   font-family: "Bungee Inline", sans-serif;
 }
+
+.center-loader-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

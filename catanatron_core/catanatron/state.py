@@ -231,16 +231,23 @@ class State:
         state_copy.acceptees = self.acceptees
 
         state_copy.playable_actions = self.playable_actions
+        if hasattr(self, "rng"):
+            state_copy.rng = pickle.loads(pickle.dumps(self.rng))
         return state_copy
 
 
-def roll_dice():
+def _state_rng(state):
+    return getattr(state, "rng", random)
+
+
+def roll_dice(state=None):
     """Yields two random numbers
 
     Returns:
         tuple[int, int]: 2-tuple of random numbers from 1 to 6 inclusive.
     """
-    return (random.randint(1, 6), random.randint(1, 6))
+    rng = _state_rng(state)
+    return (rng.randint(1, 6), rng.randint(1, 6))
 
 
 def yield_resources(board: Board, resource_freqdeck, number):
@@ -457,7 +464,7 @@ def apply_action(state: State, action: Action):
         key = player_key(state, action.color)
         state.player_state[f"{key}_HAS_ROLLED"] = True
 
-        dices = action.value or roll_dice()
+        dices = action.value or roll_dice(state)
         number = dices[0] + dices[1]
         action = Action(action.color, action.action_type, dices)
 
@@ -494,7 +501,7 @@ def apply_action(state: State, action: Action):
         num_to_discard = len(hand) // 2
         if action.value is None:
             # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
-            discarded = random.sample(hand, k=num_to_discard)
+            discarded = _state_rng(state).sample(hand, k=num_to_discard)
         else:
             discarded = action.value  # for replay functionality
         to_discard = freqdeck_from_listdeck(discarded)

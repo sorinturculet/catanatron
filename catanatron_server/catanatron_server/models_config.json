@@ -1,0 +1,54 @@
+[
+  {
+    "id": "HUMAN",
+    "kind": "human",
+    "label": "You (human)",
+    "description": "Play this seat manually.",
+    "category": "human"
+  },
+  {
+    "id": "RANDOM",
+    "kind": "heuristic",
+    "label": "Random Bot",
+    "description": "Chooses random legal actions.",
+    "category": "baseline"
+  },
+  {
+    "id": "VALUE_FUNCTION",
+    "kind": "heuristic",
+    "label": "Heuristic VFP",
+    "description": "Heuristic value-function player.",
+    "category": "baseline"
+  },
+  {
+    "id": "CATANATRON",
+    "kind": "alphabeta",
+    "label": "AlphaBeta (d=2)",
+    "description": "Tree-search baseline player.",
+    "category": "baseline"
+  },
+  {
+    "id": "PPO_EASY",
+    "kind": "ppo",
+    "label": "PPO Easy",
+    "description": "Expert-guided PPO. Beatable for new players.",
+    "category": "expert_guided",
+    "model_path": "catanatron_experimental/catanatron_experimental/machine_learning/model_v25.zip"
+  },
+  {
+    "id": "PPO_MEDIUM",
+    "kind": "ppo",
+    "label": "PPO Medium",
+    "description": "Behavioral-cloning PPO. Solid challenge (~66% vs VFP).",
+    "category": "behavioral_cloning",
+    "model_path": "catanatron_experimental/catanatron_experimental/machine_learning/model_v35.zip"
+  },
+  {
+    "id": "PPO_HARD",
+    "kind": "ppo",
+    "label": "PPO Hard",
+    "description": "Current best model (~70% vs VFP).",
+    "category": "behavioral_cloning",
+    "model_path": "catanatron_experimental/catanatron_experimental/machine_learning/model_v37.zip"
+  }
+]

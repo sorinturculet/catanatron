@@ -4,6 +4,7 @@ Contains Game class which is a thin-wrapper around the State class.
 
 import uuid
 import random
+import secrets
 import sys
 from typing import List, Union, Optional
 
@@ -106,12 +107,15 @@ class Game:
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
         if initialize:
-            self.seed = seed if seed is not None else random.randrange(sys.maxsize)
+            self.seed = seed if seed is not None else secrets.randbits(63)
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
             self.state = State(players, catan_map, discard_limit=discard_limit)
+            # Isolate in-game randomness from global random module mutations
+            # (e.g. third-party model loading code that may reseed globally).
+            self.state.rng = random.Random(self.seed)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.

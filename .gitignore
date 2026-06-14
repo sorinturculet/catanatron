@@ -141,3 +141,9 @@ dmypy.json
 
 # wandb
 /wandb/
+
+# Trained model checkpoints (too large for GitHub, host externally)
+catanatron_experimental/catanatron_experimental/machine_learning/model_*.zip
+
+# Optuna study database
+catanatron_experimental/catanatron_experimental/optunatan.db

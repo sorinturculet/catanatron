@@ -2,37 +2,75 @@ import json
 import logging
 import traceback
 
-from flask import Response, Blueprint, jsonify, abort, request
+from flask import Response, Blueprint, jsonify, abort, request, current_app
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
-from catanatron_server.models import upsert_game_state, get_game_state
+from catanatron_server.models import GameOwnership, upsert_game_state, get_game_state, db
+from catanatron_server.realtime import emit_state, start_bot_turns_if_needed
 from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.player import Color
 from catanatron.game import Game
-from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
 from catanatron_experimental.analysis.mcts_analysis import GameAnalyzer
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
 
-def player_factory(player_key):
-    if player_key[0] == "CATANATRON":
-        return AlphaBetaPlayer(player_key[1], 2, True)
-    elif player_key[0] == "RANDOM":
-        return RandomPlayer(player_key[1])
-    elif player_key[0] == "HUMAN":
-        return ValueFunctionPlayer(player_key[1], is_bot=False)
-    else:
-        raise ValueError("Invalid player key")
+def _extract_player_keys():
+    payload = request.get_json(silent=True) or {}
+    player_keys = payload.get("players")
+    if not isinstance(player_keys, list) or len(player_keys) < 2 or len(player_keys) > 4:
+        abort(400, description="`players` must be a list with 2 to 4 player ids.")
+    return player_keys
+
+
+def _assert_supported_player_constraints(player_keys):
+    try:
+        contains_model_player = any(
+            current_app.registry.is_model_based_player(player_id) for player_id in player_keys
+        )
+    except ValueError as exc:
+        abort(400, description=str(exc))
+
+    if len(player_keys) != 2 and contains_model_player:
+        abort(400, description="Model-based AI players are supported only in 1v1 games.")
+
+
+@bp.route("/players", methods=("GET",))
+def list_players_endpoint():
+    return jsonify(current_app.registry.list_public())
 
 
 @bp.route("/games", methods=("POST",))
 def post_game_endpoint():
-    player_keys = request.json["players"]
-    players = list(map(player_factory, zip(player_keys, Color)))
+    player_keys = _extract_player_keys()
+    _assert_supported_player_constraints(player_keys)
+    try:
+        players = [
+            current_app.registry.create_player(player_key, color)
+            for player_key, color in zip(player_keys, Color)
+        ]
+    except ValueError as exc:
+        abort(400, description=str(exc))
 
     game = Game(players=players)
     upsert_game_state(game)
+    emit_state(game)
+    start_bot_turns_if_needed(current_app._get_current_object(), game.id)
+
+    verify_jwt_in_request(optional=True)
+    user_id = get_jwt_identity()
+    if user_id is not None:
+        db.session.add(
+            GameOwnership(
+                user_id=int(user_id),
+                game_uuid=game.id,
+                num_players=len(players),
+                players_config=json.dumps(player_keys),
+            )
+        )
+        db.session.commit()
+
     return jsonify({"game_id": game.id})
 
 
@@ -68,10 +106,14 @@ def post_action_endpoint(game_id):
     if game.state.current_player().is_bot or body_is_empty:
         game.play_tick()
         upsert_game_state(game)
+        emit_state(game)
     else:
         action = action_from_json(request.json)
         game.execute(action)
         upsert_game_state(game)
+        emit_state(game)
+
+    start_bot_turns_if_needed(current_app._get_current_object(), game.id)
 
     return Response(
         response=json.dumps(game, cls=GameEncoder),

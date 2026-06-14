@@ -18,10 +18,17 @@ export const snackbarActions = (closeSnackbar) => (key) =>
   );
 
 export function dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState) {
-  enqueueSnackbar(humanizeAction(gameState, gameState.actions.slice(-1)[0]), {
+  const actions = Array.isArray(gameState?.actions) ? gameState.actions : [];
+  const latestAction = actions[actions.length - 1];
+  if (!Array.isArray(latestAction) || latestAction.length < 2) {
+    return false;
+  }
+
+  enqueueSnackbar(humanizeAction(gameState, latestAction), {
     action: snackbarActions(closeSnackbar),
     onClick: () => {
       closeSnackbar();
     },
   });
+  return true;
 }

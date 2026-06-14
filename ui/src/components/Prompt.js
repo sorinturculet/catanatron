@@ -25,10 +25,17 @@ function getShortTileString(tileTile) {
 }
 
 export function humanizeAction(gameState, action) {
-  const botColors = gameState.bot_colors;
+  if (!Array.isArray(action) || action.length < 2) {
+    return "";
+  }
+
+  const botColors = Array.isArray(gameState.bot_colors) ? gameState.bot_colors : [];
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
     case "ROLL":
+      if (!Array.isArray(action[2]) || action[2].length < 2) {
+        return `${player} ROLLED`;
+      }
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
     case "DISCARD":
       return `${player} DISCARDED`;

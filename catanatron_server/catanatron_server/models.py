@@ -3,7 +3,19 @@ import json
 import pickle
 from contextlib import contextmanager
 
-from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
+from sqlalchemy import (
+    MetaData,
+    Column,
+    Integer,
+    String,
+    LargeBinary,
+    DateTime,
+    ForeignKey,
+    Text,
+    UniqueConstraint,
+    create_engine,
+    func,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -36,6 +48,41 @@ class GameState(Base):
             state=state,
             pickle_data=pickle_data,
         )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(254), nullable=False, unique=True, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class GameOwnership(Base):
+    __tablename__ = "game_ownerships"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    game_uuid = Column(String(64), nullable=False, index=True)
+    num_players = Column(Integer, nullable=False)
+    players_config = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "game_uuid", name="uq_game_ownership_user_game"),
+    )
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used_at = Column(DateTime, nullable=True, index=True)
 
 
 db = SQLAlchemy(metadata=metadata)

@@ -89,7 +89,7 @@ def main():
 
     # Train for 10M timesteps (same as v8 total)
     total_timesteps = 10_000_000
-
+    #total_timesteps = 100_000
     # Same network architecture as v8 (proven best)
     cnn_arch = [64, 128, 256, 512]
     net_arch = [
@@ -237,6 +237,18 @@ def main():
 
     # Print the observation space to verify its type
     print("Observation Space:", env.observation_space)
+
+    # CRITICAL: Verify feature count is correct for v11
+    if hasattr(env.observation_space, 'spaces') and 'numeric' in env.observation_space.spaces:
+        numeric_shape = env.observation_space.spaces['numeric'].shape[0]
+        print(f"\n*** NUMERIC FEATURE COUNT: {numeric_shape} ***")
+        if numeric_shape < 100:
+            print("!!! WARNING: Expected 137 features for v11, got only", numeric_shape)
+            print("!!! features.py may not have v11 changes (buildable_node_values, resource_strategy_features)")
+            print("!!! Run: grep -c 'buildable_node_values' catanatron_gym/features.py (should be 2)")
+        else:
+            print("✓ Feature count looks correct for v11 (expected ~137)")
+
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 

@@ -2,27 +2,71 @@
 
 > **Fork of**: [bcollazo/catanatron](https://github.com/bcollazo/catanatron) - Settlers of Catan simulator
 
-## PPO Reinforcement Learning Experiments
+## Diploma Thesis — Imitation-Initialized RL for Settlers of Catan
 
-Training PPO agents using Stable-Baselines3 to play Catan. Current progress against the ValueFunctionPlayer baseline:
+This fork contains the experimental code, training pipelines, and web application accompanying the diploma thesis:
 
-| Version | Architecture & Key Changes | Win Rate | Avg VP | Improvement |
-|---------|---------------------------|----------|--------|-------------|
-| v1 (baseline) | CNN [64,128,256,512] + MLP 8-layer; partial rewards | 6% | 4.83 | - |
-| v3 | + dense VP rewards | 9% | 5.12 | +50% wins |
-| v4 | + mixed opponents (ValueFunc/WeightedRandom/VP) | 11% | 4.81 | +83% wins |
-| **v8b** | **Self-play with opponent pool + bootstrapping** | **12%** | **5.35** | **+100% wins** |
-| v10 | Online imitation learning with expert guidance | 9% | 5.15 | +50% wins |
+> **Imitation-Initialized Reinforcement Learning for Strategic Decision-Making in Settlers of Catan**
+> Turculeț Sorin-Nicolae — Babeș-Bolyai University, Faculty of Mathematics and Computer Science, 2026
+> Scientific supervisor: Prof. dr. Gabriela Czibula
 
-**Key findings so far:**
-- Self-play with opponent pooling (v8b) achieved the best results: **2x win rate improvement** over baseline
-- Dense VP-based reward shaping helps more than partial rewards
-- Pure cyclic self-play from scratch (v9) underperformed bootstrapped approaches
-- GNN/attention architectures (v5, v6) didn't outperform simpler CNNs
+The full thesis PDF is included in the root of this repository: [Thesis_Turculet_Sorin.pdf](Thesis_Turculet_Sorin.pdf). Detailed per-version evaluation metrics are stored in [ppo_eval_runs.csv](ppo_eval_runs.csv).
 
-Experiments ongoing - see [ppo_eval_runs.csv](ppo_eval_runs.csv) for detailed metrics.
+### Methodology
 
-*A PR will be submitted to the original repository upon completion of experiments.*
+Three policy-optimization pipelines were evaluated, all built on Maskable PPO ([Stable-Baselines3](https://stable-baselines3.readthedocs.io)) with a CNN feature extractor over the spatial board representation. All evaluations are 1v1 against the heuristic ValueFunctionPlayer (VFP) over 500 games.
+
+1. **Pure-PPO** — trained from scratch with environment rewards only.
+2. **EG-PPO (Expert-Guided)** — PPO from scratch with a continuous shaping bonus derived from the VFP heuristic score.
+3. **BC-PPO (Behavioral Cloning + PPO)** — supervised pre-training of the policy on 100K VFP self-play games (~15M decision points), followed by unconstrained PPO fine-tuning with no expert wrapper.
+
+### Main Results
+
+Win rate against the ValueFunctionPlayer baseline (500 games per row):
+
+| Pipeline | Version | Training Steps | Win Rate | Avg VP |
+|----------|---------|----------------|----------|--------|
+| Pure-PPO | v2 (CNN + MLP, dense VP rewards) | 10M | 8.2% | 5.15 |
+| Pure-PPO | v6 (GNN GATv2) | 10M | 9.6% | 5.31 |
+| Pure-PPO | v9 (cyclic self-play from scratch) | 10M | 3.0% | 3.95 |
+| EG-PPO | v15 (expert guidance + production-aware) | 10M | 15.4% | 6.16 |
+| EG-PPO | v19 (extended training) | 30M | 21.2% | 7.03 |
+| EG-PPO | **v26** (5-stage LR, road/settle bonus) | 50M | **31.2%** | 7.23 |
+| BC-PPO | v34 (50K-game BC + dense VP rewards) | 50M | 60.0% | 8.63 |
+| BC-PPO | v35 (100K-game BC, cosine LR) | 80M | 66.4% | 8.95 |
+| BC-PPO | v36 (SGDR warm restart from v35) | 120M | 68.8% | 8.99 |
+| BC-PPO | **v37** (mixed VFP opponents, prod-aware) | 170M | **69.6%** | 9.08 |
+
+The final BC-PPO agent (v37) wins **348 of 500** head-to-head games against the heuristic baseline.
+
+### Key Findings
+
+- **Pure-PPO hits a ~10% ceiling.** Neither architectural changes (GNN, attention) nor reward shaping alone broke through. Credit assignment over ~400 sequential decisions with sparse terminal rewards is the bottleneck, not network capacity.
+- **Expert guidance breaks the ceiling but creates a new one.** EG-PPO reached 31.2% at 50M steps. The shaping signal biases the agent toward the 1-ply heuristic's strategy and penalizes superior non-heuristic moves, capping further improvement.
+- **Behavioral cloning decouples knowledge from the RL objective.** Initializing the policy with supervised pre-training and removing the shaping wrapper during fine-tuning more than doubled the EG-PPO ceiling, reaching 69.6%.
+- **Paradox of teacher quality.** Pre-training on the strategically stronger AlphaBeta(depth=2) teacher *degrades* final performance compared to pre-training on the simpler VFP heuristic:
+
+  | Model | BC Teacher | PPO Opponent | vs VFP | vs AlphaBeta |
+  |-------|-----------|--------------|--------|--------------|
+  | v35 | VFP (100K games) | VFP | **66.4%** | **65.4%** |
+  | v38 | AlphaBeta (100K games) | VFP | 61.6% | 60.0% |
+  | v39 | AlphaBeta (100K games) | AlphaBeta | 57.8% | 56.4% |
+
+  The 1-ply policy network cannot reconstruct AlphaBeta's multi-ply search tree from static observations, so the network sees the teacher's actions as noisy with respect to the immediate state. Teacher–student architectural compatibility matters more than raw teacher strength.
+
+### Reproducing the Experiments
+
+Training scripts live in [catanatron_experimental/catanatron_experimental/machine_learning/](catanatron_experimental/catanatron_experimental/machine_learning/), one per version (`train_ppo_agent_*.py`, `train_ablation_*.py`). The behavioral cloning data collectors are `collect_and_train_bc.py` (VFP teacher) and `collect_and_train_bc_alphabeta.py` (AlphaBeta teacher). Trained checkpoints are not committed to the repo because of GitHub file-size limits — they are produced by the training scripts.
+
+The PPO agent itself is registered as a player under [catanatron_experimental/.../players/ppo.py](catanatron_experimental/catanatron_experimental/machine_learning/players/ppo.py) and can be played via the CLI:
+
+```
+catanatron-play --players=PPO,VP --num=500
+```
+
+### Web Application
+
+The thesis also includes a web application (Chapter 4) for playing against the trained agents in a browser. The original Catanatron repository provides a polling-based React/Flask stack; the thesis refactor adds a WebSocket pipeline, a dynamic Stable-Baselines3 model registry, JWT-based user accounts with PostgreSQL persistence, and updated SVG board assets. See [docker-compose.yml](docker-compose.yml) and the original instructions below for running the full stack locally.
 
 ---
 

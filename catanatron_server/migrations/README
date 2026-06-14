@@ -1,0 +1,10 @@
+Single-database configuration for Flask-Migrate.
+
+Typical workflow:
+1) flask --app catanatron_server:create_app db upgrade -d catanatron_server/migrations
+2) flask --app catanatron_server:create_app db migrate -d catanatron_server/migrations -m "describe change"
+3) flask --app catanatron_server:create_app db upgrade -d catanatron_server/migrations
+
+If the database already contains tables created by old `db.create_all()` startup behavior:
+1) flask --app catanatron_server:create_app db stamp -d catanatron_server/migrations 20260513_01
+2) Continue with normal migrate/upgrade flow for later revisions.
